@@ -15,6 +15,14 @@ enum DxccStatus {
     All           = 0b1111111
 };
 
+/* Granularity at which a DXCC status is evaluated */
+enum class DxccStatusScope
+{
+    BandMode = 0,   // per band and mode group (default; the status shown in DXC, WSJTX and Bandmap)
+    Band     = 1,   // per band, regardless of mode
+    Entity   = 2    // per entity, regardless of band and mode
+};
+
 class DxccEntity {
 public:
     QString country;
