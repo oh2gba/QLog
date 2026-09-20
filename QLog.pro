@@ -93,6 +93,7 @@ SOURCES += \
         core/LogDatabase.cpp \
         core/LogLocale.cpp \
         core/LogParam.cpp \
+        core/ExpeditionList.cpp \
         core/MembershipQE.cpp \
         core/Migration.cpp \
         core/MqttClient.cpp \
@@ -290,6 +291,7 @@ HEADERS += \
         core/LogDatabase.h \
         core/LogLocale.h \
         core/LogParam.h \
+        core/ExpeditionList.h \
         core/MembershipQE.h \
         core/Migration.h \
         core/MqttClient.h \

@@ -18,6 +18,7 @@
 #include <QSqlError>
 #include "LogParam.h"
 #include "LOVDownloader.h"
+#include "ExpeditionList.h"
 #include "FileCompressor.h"
 #include "debug.h"
 #include "data/Data.h"
@@ -816,6 +817,16 @@ void LOVDownloader::parseMembershipContent(const SourceDefinition &sourceDef, QT
         emit progress(data.pos());
         QCoreApplication::processEvents();
     }
+
+    // the built-in DXpedition list is not part of the downloaded directory
+    entityRecord.clearValues();
+    entityRecord.setValue("short_desc", ExpeditionList::CLUBID);
+    entityRecord.setValue("long_desc", QStringLiteral("Active DXpeditions (Club Log)"));
+    entityRecord.setValue("filename", ExpeditionList::DIRECTORY_FILENAME);
+    entityRecord.setValue("last_update", QDate::currentDate().toString("yyyyMMdd"));
+
+    if ( !entityTableModel.insertRecord(-1, entityRecord) )
+        qWarning() << "Cannot insert the DXpedition record to Membership Directory Table - " << entityTableModel.lastError();
 
     if ( entityTableModel.submitAll()
          && !abortRequested )

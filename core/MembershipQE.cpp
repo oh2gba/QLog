@@ -11,6 +11,7 @@
 #include <QCoreApplication>
 
 #include "MembershipQE.h"
+#include "ExpeditionList.h"
 #include "core/debug.h"
 #include "core/LogDatabase.h"
 #include "data/Callsign.h"
@@ -272,7 +273,13 @@ bool MembershipQE::planDownloads(const QStringList &enabledLists)
 
     while ( query.next() )
     {
-        updatePlan << QPair<QString, QString>(query.value(0).toString(),QString(MEMBERLIST_BASE_URL) + "/" + query.value(1).toString());
+        const QString clubid = query.value(0).toString();
+        const QString filename = query.value(1).toString();
+
+        // the built-in DXpedition list is fetched from Club Log, all other lists from the list repository
+        const QString url = ExpeditionList::isDirectoryFilename(filename) ? ExpeditionList::URL
+                                                                          : QString(MEMBERLIST_BASE_URL) + "/" + filename;
+        updatePlan << QPair<QString, QString>(clubid, url);
     }
 
     qCDebug(runtime)  << "DONE";
@@ -332,8 +339,10 @@ void MembershipQE::onFinishedListDownload(QNetworkReply *reply)
          && reply->error() == QNetworkReply::NoError
          && replyStatusCode >= 200 && replyStatusCode < 300)
     {
-        QByteArray data = reply->readAll();        
-        if ( ! importData(clubid, data) )
+        QByteArray data = reply->readAll();
+        const bool imported = ( clubid == ExpeditionList::CLUBID ) ? importExpeditions(data)
+                                                                   : importData(clubid, data);
+        if ( ! imported )
         {
             QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
                                  QMessageBox::tr("Unexpected Club List content for") + " " + clubid);
@@ -360,6 +369,75 @@ void MembershipQE::onFinishedListDownload(QNetworkReply *reply)
     reply->deleteLater();
 
     startPlannedDownload();
+}
+
+bool MembershipQE::importExpeditions(const QByteArray &data)
+{
+    FCT_IDENTIFICATION;
+
+    const QDate today = QDate::currentDate();
+    QString error;
+    const QList<ExpeditionList::Entry> expeditions = ExpeditionList::parse(data,
+                                                                           ExpeditionList::cutoffDate(today),
+                                                                           &error);
+
+    if ( !error.isEmpty() )
+    {
+        qWarning() << "Cannot parse the Club Log expedition list" << error;
+        return false;
+    }
+
+    Q_UNUSED(QSqlDatabase::database().transaction());
+
+    QSqlQuery query;
+
+    if ( ! query.exec(QString("DELETE FROM membership WHERE clubid = '%1';").arg(ExpeditionList::CLUBID)) )
+    {
+        qWarning() << "Cannot delete records for " << ExpeditionList::CLUBID << query.lastError().text();
+        Q_UNUSED(QSqlDatabase::database().rollback());
+        return false;
+    }
+
+    if ( ! query.prepare(QString("INSERT INTO membership(callsign, member_id, valid_from, valid_to, clubid) "
+                                 "VALUES (:callsign, :member_id, :valid_from, :valid_to, '%1')").arg(ExpeditionList::CLUBID)) )
+    {
+        qWarning() << "Cannot prepare Insert statement for membership table" << query.lastError().text();
+        Q_UNUSED(QSqlDatabase::database().rollback());
+        return false;
+    }
+
+    for ( const ExpeditionList::Entry &expedition : expeditions )
+    {
+        // the last QSO date is shown as the member ID; the expedition stays
+        // active for ACTIVE_MONTHS after its last QSO
+        query.bindValue(":callsign", expedition.callsign);
+        query.bindValue(":member_id", expedition.lastQSO.toString(Qt::ISODate));
+        query.bindValue(":valid_from", expedition.lastQSO.toString("yyyyMMdd"));
+        query.bindValue(":valid_to", expedition.lastQSO.addMonths(ExpeditionList::ACTIVE_MONTHS).toString("yyyyMMdd"));
+
+        if ( ! query.exec() )
+            qWarning() << "membership insert error " << query.lastError().text();
+    }
+
+    // the list version is the download date, the directory entry carries
+    // the date of the last directory refresh - see planDownloads()
+    QSqlQuery versionQuery;
+
+    if ( ! versionQuery.prepare("REPLACE INTO membership_versions(clubid, version) VALUES (:clubid, :version)")
+         || ( versionQuery.bindValue(":clubid", ExpeditionList::CLUBID),
+              versionQuery.bindValue(":version", today.toString("yyyyMMdd").toInt()),
+              !versionQuery.exec() ) )
+    {
+        qWarning() << "Membership version insert error " << versionQuery.lastError().text();
+        Q_UNUSED(QSqlDatabase::database().rollback());
+        return false;
+    }
+
+    Q_UNUSED(QSqlDatabase::database().commit());
+
+    qCDebug(runtime) << "Imported" << expeditions.size() << "active DXpeditions";
+
+    return true;
 }
 
 bool MembershipQE::importData(const QString &clubid, const QByteArray &data)
