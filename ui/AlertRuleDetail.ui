@@ -899,6 +899,178 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="alarm">
+      <attribute name="title">
+       <string>Alarm</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_alarm">
+       <item>
+        <widget class="QLabel" name="alarmLabel">
+         <property name="text">
+          <string>When this rule matches a spot:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="alarmNoneRadio">
+         <property name="text">
+          <string>No alarm</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="alarmBellRadio">
+         <property name="toolTip">
+          <string>Rings the system bell of your desktop. Needs no extra software, but the bell must be enabled in the desktop settings.</string>
+         </property>
+         <property name="text">
+          <string>Ring the system bell</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="alarmCommandRadio">
+         <property name="toolTip">
+          <string>Starts the command below. Nothing runs unless you enter a command.</string>
+         </property>
+         <property name="text">
+          <string>Run a command</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="formLayout_alarm">
+         <property name="horizontalSpacing">
+          <number>12</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="alarmCommandLabel">
+           <property name="text">
+            <string>Command</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="alarmCommandEdit">
+           <property name="toolTip">
+            <string>Any program with its arguments, for example a Morse or text-to-speech tool or your own script.
+Linux: morse -w 25 -f 700 -v 0.5 -e DX
+Windows: powershell -c &quot;[console]::beep(700,300)&quot;
+macOS: say DX</string>
+           </property>
+           <property name="placeholderText">
+            <string>morse -w 25 -f 700 -v 0.5 -e DX</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="alarmPlaceholdersLabel">
+           <property name="text">
+            <string>Placeholders: {callsign} {band} {mode} {freq} {country} {rule}</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="alarmBackoffLabel">
+           <property name="text">
+            <string>Repeat</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <layout class="QHBoxLayout" name="horizontalLayout_alarmBackoff">
+           <item>
+            <widget class="QLabel" name="alarmBackoffPrefixLabel">
+             <property name="text">
+              <string>not more than once per</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="alarmBackoffSpin">
+             <property name="toolTip">
+              <string>The same callsign does not start the command again within this time. 0 means every time.</string>
+             </property>
+             <property name="suffix">
+              <string> min</string>
+             </property>
+             <property name="maximum">
+              <number>1440</number>
+             </property>
+             <property name="value">
+              <number>5</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="alarmBackoffSuffixLabel">
+             <property name="text">
+              <string>for the same callsign</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="alarmBackoffSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item row="3" column="1">
+          <layout class="QHBoxLayout" name="horizontalLayout_alarmTest">
+           <item>
+            <widget class="QPushButton" name="alarmTestButton">
+             <property name="toolTip">
+              <string>Runs the command once with sample values</string>
+             </property>
+             <property name="text">
+              <string>Test</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="alarmTestSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="alarmVerticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>
@@ -955,6 +1127,12 @@
   <tabstop>memberGroupBox</tabstop>
   <tabstop>spotterCountryCombo</tabstop>
   <tabstop>continent_spotter</tabstop>
+  <tabstop>alarmNoneRadio</tabstop>
+  <tabstop>alarmBellRadio</tabstop>
+  <tabstop>alarmCommandRadio</tabstop>
+  <tabstop>alarmCommandEdit</tabstop>
+  <tabstop>alarmBackoffSpin</tabstop>
+  <tabstop>alarmTestButton</tabstop>
   <tabstop>afcheckbox_spotter</tabstop>
   <tabstop>ancheckbox_spotter</tabstop>
   <tabstop>nacheckbox_spotter</tabstop>

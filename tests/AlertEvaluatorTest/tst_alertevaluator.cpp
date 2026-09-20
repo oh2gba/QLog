@@ -219,6 +219,8 @@ private slots:
     void scope_conversion();
     void logstatus_sentence_data();
     void logstatus_sentence();
+    void alarm_command_line();
+    void alarm_backoff();
 };
 
 void AlertEvaluatorTest::initTestCase()
@@ -1646,6 +1648,70 @@ void AlertEvaluatorTest::logstatus_sentence()
         QCOMPARE(newOneRule->match(spot, makeResolver(DxccStatus::NewBand, DxccStatus::Confirmed)), false);
         QCOMPARE(newOneRule->match(spot, makeResolver(DxccStatus::NewBand, DxccStatus::NewEntity)), true);
     }
+}
+
+void AlertEvaluatorTest::alarm_command_line()
+{
+    DxSpotSpec spec;
+    spec.callsign = QStringLiteral("6Y9A");
+    spec.band = QStringLiteral("10m");
+    spec.modeGroupString = QStringLiteral("CW");
+    DxSpot spot = makeDxSpot(spec);
+    spot.freq = 28.0251;
+    spot.dxcc.country = QStringLiteral("Jamaica");
+
+    /* plain command, no placeholders */
+    QCOMPARE(AlertRule::alarmCommandLine("morse -w 25 -f 700 -e DX", spot, "New One"),
+             QStringList({"morse", "-w", "25", "-f", "700", "-e", "DX"}));
+
+    /* placeholders are replaced per argument; a quoted argument stays one argument */
+    QCOMPARE(AlertRule::alarmCommandLine("espeak \"new one {callsign} {country} on {band} {mode} {freq} {rule}\"", spot, "New One"),
+             QStringList({"espeak", "new one 6Y9A Jamaica on 10m CW 28.025 New One"}));
+
+    /* a country with a space inserted into an unquoted argument is still one argument */
+    spot.dxcc.country = QStringLiteral("United States");
+    QCOMPARE(AlertRule::alarmCommandLine("say {country}", spot, "r"),
+             QStringList({"say", "United States"}));
+
+    /* nothing to run */
+    QVERIFY(AlertRule::alarmCommandLine("", spot, "r").isEmpty());
+    QVERIFY(AlertRule::alarmCommandLine("   ", spot, "r").isEmpty());
+
+    /* the list of placeholders documented in the dialog is the list that is replaced */
+    QCOMPARE(AlertRule::ALARM_PLACEHOLDERS.size(), 6);
+    for ( const QString &placeholder : AlertRule::ALARM_PLACEHOLDERS )
+        QVERIFY2(!AlertRule::alarmCommandLine("x " + placeholder, spot, "r").last().contains('{'),
+                 qPrintable(placeholder));
+}
+
+void AlertEvaluatorTest::alarm_backoff()
+{
+    QHash<QString, QDateTime> history;
+    const QDateTime t0 = QDateTime(QDate(2026, 9, 20), QTime(12, 0, 0), Qt::UTC);
+
+    /* first time always fires */
+    QVERIFY(AlertEvaluator::alarmDue(history, "rule", 300, "6Y9A", t0));
+    /* same rule and callsign within the backoff: silent */
+    QVERIFY(!AlertEvaluator::alarmDue(history, "rule", 300, "6Y9A", t0.addSecs(10)));
+    QVERIFY(!AlertEvaluator::alarmDue(history, "rule", 300, "6Y9A", t0.addSecs(299)));
+    /* another callsign of the same rule: fires */
+    QVERIFY(AlertEvaluator::alarmDue(history, "rule", 300, "ZL7X", t0.addSecs(10)));
+    /* the same callsign via another rule: fires */
+    QVERIFY(AlertEvaluator::alarmDue(history, "other", 300, "6Y9A", t0.addSecs(10)));
+    /* after the backoff: fires again and restarts the window */
+    QVERIFY(AlertEvaluator::alarmDue(history, "rule", 300, "6Y9A", t0.addSecs(300)));
+    QVERIFY(!AlertEvaluator::alarmDue(history, "rule", 300, "6Y9A", t0.addSecs(400)));
+    /* backoff 0: every time */
+    QVERIFY(AlertEvaluator::alarmDue(history, "rule", 0, "6Y9A", t0.addSecs(401)));
+    QVERIFY(AlertEvaluator::alarmDue(history, "rule", 0, "6Y9A", t0.addSecs(401)));
+    /* an empty command line is never started */
+    QVERIFY(!AlertEvaluator::startAlarm(QStringList()));
+
+    /* stored alarm types; unknown values (older rules) mean no alarm */
+    QCOMPARE(AlertRule::toAlarmType(0), AlertRule::AlarmType::None);
+    QCOMPARE(AlertRule::toAlarmType(1), AlertRule::AlarmType::Bell);
+    QCOMPARE(AlertRule::toAlarmType(2), AlertRule::AlarmType::Command);
+    QCOMPARE(AlertRule::toAlarmType(7), AlertRule::AlarmType::None);
 }
 
 QTEST_APPLESS_MAIN(AlertEvaluatorTest)

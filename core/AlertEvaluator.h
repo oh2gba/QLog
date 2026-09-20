@@ -38,6 +38,14 @@ public:
         Confirmed = 1
     };
 
+    /* What happens when the rule matches a spot */
+    enum class AlarmType
+    {
+        None    = 0,
+        Bell    = 1,   // the system bell
+        Command = 2    // the alarm command is started
+    };
+
     explicit AlertRule(QObject *parent = nullptr);
     ~AlertRule() {};
 
@@ -55,6 +63,15 @@ public:
     void setLogStatus(LogStatusNeed need, LogStatusUntil until);
     LogStatusNeed logStatusNeed() const;
     LogStatusUntil logStatusUntil() const;
+
+    /* The alarm command line with the placeholders replaced by the spot
+     * values. The first element is the program, the rest are its arguments.
+     * An empty list means that there is nothing to run. */
+    static QStringList alarmCommandLine(const QString &command,
+                                        const DxSpot &spot,
+                                        const QString &ruleName);
+    static const QStringList ALARM_PLACEHOLDERS;
+    static AlarmType toAlarmType(int value);
 
 public:
     QString ruleName;
@@ -77,6 +94,9 @@ public:
     bool sota;
     bool iota;
     bool wwff;
+    AlarmType alarm;
+    QString alarmCommand;
+    int alarmBackoff;   // seconds; the same callsign does not alarm again within this time
 
 private:
     DxccStatus logStatus(const DxSpot &spot,
@@ -99,6 +119,17 @@ public:
 
     void clearRules();
     void setLogStatusResolver(const AlertRule::LogStatusResolver &resolver);
+    void setAlarmsMuted(bool muted);
+    bool alarmsMuted() const { return alarmsMutedState; }
+
+    /* Decides whether the alarm of a rule is due for a callsign and records
+     * the time when it is. The history is passed in to keep the function testable */
+    static bool alarmDue(QHash<QString, QDateTime> &history,
+                         const QString &ruleName,
+                         int backoffSeconds,
+                         const QString &callsign,
+                         const QDateTime &now);
+    static bool startAlarm(const QStringList &commandLine);
 
 public slots:
     void dxSpot(const DxSpot&);
@@ -107,10 +138,15 @@ public slots:
 
 signals:
     void spotAlert(SpotAlert alert);
+    void alarmBell();
 
 private:
+    void runAlarms(const QList<const AlertRule *> &matchedRules, const DxSpot &spot);
+
     QList<AlertRule *>ruleList;
     AlertRule::LogStatusResolver logStatusResolver;
+    QHash<QString, QDateTime> alarmHistory;
+    bool alarmsMutedState = false;
 };
 
 #endif // QLOG_CORE_ALERTEVALUATOR_H

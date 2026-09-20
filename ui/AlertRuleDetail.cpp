@@ -1,4 +1,6 @@
 #include <QComboBox>
+#include <QRadioButton>
+#include <QApplication>
 #include <QCheckBox>
 #include <QSqlQuery>
 #include <QSqlError>
@@ -28,6 +30,15 @@ AlertRuleDetail::AlertRuleDetail(const QString &ruleName, QWidget *parent, bool 
     ui->ituEdit->setValidator(new QIntValidator(Data::getITUZMin(), Data::getITUZMax(), ui->ituEdit));
 
     setupLogStatus();
+
+    /*********/
+    /* Alarm */
+    /*********/
+    connect(ui->alarmNoneRadio, &QRadioButton::toggled, this, &AlertRuleDetail::alarmTypeChanged);
+    connect(ui->alarmBellRadio, &QRadioButton::toggled, this, &AlertRuleDetail::alarmTypeChanged);
+    connect(ui->alarmCommandRadio, &QRadioButton::toggled, this, &AlertRuleDetail::alarmTypeChanged);
+    connect(ui->alarmTestButton, &QPushButton::clicked, this, &AlertRuleDetail::testAlarm);
+    alarmTypeChanged();
 
     /*************/
     /* Get Bands */
@@ -320,6 +331,13 @@ void AlertRuleDetail::save()
      **********/
     rule.wwff = ui->wwffCheckbox->isChecked();
 
+    /*********
+     * Alarm
+     ********/
+    rule.alarm = currentAlarmType();
+    rule.alarmCommand = ui->alarmCommandEdit->text().trimmed();
+    rule.alarmBackoff = ui->alarmBackoffSpin->value() * 60;
+
     qCDebug(runtime) << rule;
 
     if ( ! rule.save() )
@@ -418,6 +436,63 @@ void AlertRuleDetail::updateLogStatusToolTips()
     need->setItemData(need->findData(static_cast<int>(AlertRule::LogStatusNeed::NewBandMode)),
                       tr("The country is not yet %1 on this band in this mode.").arg(state),
                       Qt::ToolTipRole);
+}
+
+AlertRule::AlarmType AlertRuleDetail::currentAlarmType() const
+{
+    FCT_IDENTIFICATION;
+
+    if ( ui->alarmBellRadio->isChecked() )    return AlertRule::AlarmType::Bell;
+    if ( ui->alarmCommandRadio->isChecked() ) return AlertRule::AlarmType::Command;
+    return AlertRule::AlarmType::None;
+}
+
+void AlertRuleDetail::alarmTypeChanged()
+{
+    FCT_IDENTIFICATION;
+
+    const AlertRule::AlarmType type = currentAlarmType();
+    const bool command = ( type == AlertRule::AlarmType::Command );
+    const bool any = ( type != AlertRule::AlarmType::None );
+
+    ui->alarmCommandLabel->setEnabled(command);
+    ui->alarmCommandEdit->setEnabled(command);
+    ui->alarmPlaceholdersLabel->setEnabled(command);
+    ui->alarmBackoffLabel->setEnabled(any);
+    ui->alarmBackoffPrefixLabel->setEnabled(any);
+    ui->alarmBackoffSpin->setEnabled(any);
+    ui->alarmBackoffSuffixLabel->setEnabled(any);
+    ui->alarmTestButton->setEnabled(any);
+}
+
+void AlertRuleDetail::testAlarm()
+{
+    FCT_IDENTIFICATION;
+
+    if ( currentAlarmType() == AlertRule::AlarmType::Bell )
+    {
+        QApplication::beep();
+        return;
+    }
+
+    // a sample spot so that the placeholders show something sensible
+    DxSpot sample;
+    sample.callsign = QStringLiteral("6Y9A");
+    sample.band = QStringLiteral("10m");
+    sample.modeGroupString = BandPlan::MODE_GROUP_STRING_CW;
+    sample.freq = 28.025;
+    sample.dxcc.country = QStringLiteral("Jamaica");
+
+    const QStringList commandLine = AlertRule::alarmCommandLine(ui->alarmCommandEdit->text(),
+                                                                sample,
+                                                                ui->ruleNameEdit->text());
+
+    if ( commandLine.isEmpty() || !AlertEvaluator::startAlarm(commandLine) )
+    {
+        QMessageBox::warning(this, QMessageBox::tr("QLog Warning"),
+                             tr("The command could not be started:<br><b>%1</b>")
+                                 .arg(ui->alarmCommandEdit->text().toHtmlEscaped()));
+    }
 }
 
 void AlertRuleDetail::setDefaultValues()
@@ -638,6 +713,18 @@ void AlertRuleDetail::loadRule(const QString &ruleName)
          * WWFF
          **********/
         ui->wwffCheckbox->setChecked(rule.wwff);
+
+        /*********
+         * Alarm
+         ********/
+        switch ( rule.alarm )
+        {
+        case AlertRule::AlarmType::Bell:    ui->alarmBellRadio->setChecked(true); break;
+        case AlertRule::AlarmType::Command: ui->alarmCommandRadio->setChecked(true); break;
+        default:                            ui->alarmNoneRadio->setChecked(true); break;
+        }
+        ui->alarmCommandEdit->setText(rule.alarmCommand);
+        ui->alarmBackoffSpin->setValue(rule.alarmBackoff / 60);
     }
     else
         qCDebug(runtime) << "Cannot load rule " << ruleName;
