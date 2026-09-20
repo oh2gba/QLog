@@ -128,6 +128,7 @@ private:
     bool planDownloads(const QStringList &enabledLists);
     void startPlannedDownload();
     bool importData(const QString &clubid, const QByteArray &data);
+    bool importExpeditions(const QByteArray &data);
     void removeClubsFromEnabledClubLists(const QList<QPair<QString, QString>> &toRemove);
 
     QSqlQuery clubQuery;

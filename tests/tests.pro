@@ -15,6 +15,7 @@ SUBDIRS += CallsignTest \
            BandmapGuideTest \
            AlertEvaluatorTest \
            DxServerStringTest \
+           ExpeditionListTest \
            HostsPortStringTest \
            MigrationTest \
            PasswordCipherTest \
