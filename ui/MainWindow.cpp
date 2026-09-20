@@ -72,6 +72,9 @@ MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     stats(new StatisticsWidget),
+    rigKeeper(tr("Rig"), this),
+    rotKeeper(tr("Rotator"), this),
+    cwKeyerKeeper(tr("CW Keyer"), this),
     clublogRT(new ClubLogUploader(this)),
     adifRecoveryManager(new AdifRecoveryManager(this))
 {
@@ -274,6 +277,21 @@ MainWindow::MainWindow(QWidget* parent) :
     });
 
     connect(Rig::instance(), &Rig::rigErrorPresent, this, &MainWindow::rigErrorHandler);
+
+    // the keepers hold the connection as long as the connect button is switched on
+    connect(&rigKeeper, &ConnectionKeeper::openRequested, Rig::instance(), &Rig::open);
+    connect(&rigKeeper, &ConnectionKeeper::closeRequested, Rig::instance(), &Rig::close);
+    connect(Rig::instance(), &Rig::rigConnected, &rigKeeper, &ConnectionKeeper::deviceConnected);
+    connect(Rig::instance(), &Rig::rigDisconnected, &rigKeeper, &ConnectionKeeper::deviceDisconnected);
+    connect(Rig::instance(), &Rig::rigPoweredOnChanged, this, [this](bool poweredOn)
+    {
+        if ( poweredOn )
+            rigKeeper.deviceConnected();
+        else
+            rigKeeper.deviceUnavailable(tr("Rig is not powered on"));
+    });
+    connect(&rigKeeper, &ConnectionKeeper::stateChanged, ui->rigWidget, &RigWidget::connectionStateChanged);
+    connect(&rigKeeper, &ConnectionKeeper::message, this, &MainWindow::showEquipmentMessage);
     connect(Rig::instance(), &Rig::rigCWKeyOpenRequest, this, &MainWindow::cwKeyerConnectProfile);
     connect(Rig::instance(), &Rig::rigCWKeyCloseRequest, this, &MainWindow::cwKeyerDisconnectProfile);
     connect(Rig::instance(), &Rig::frequencyChanged, ui->onlineMapWidget, &OnlineMapWidget::setIBPBand);
@@ -302,6 +320,12 @@ MainWindow::MainWindow(QWidget* parent) :
     connect(Rig::instance(), &Rig::rigStatusHeartBeat, &networknotification, &NetworkNotification::rigStatus);
 
     connect(Rotator::instance(), &Rotator::rotErrorPresent, this, &MainWindow::rotErrorHandler);
+    connect(&rotKeeper, &ConnectionKeeper::openRequested, Rotator::instance(), &Rotator::open);
+    connect(&rotKeeper, &ConnectionKeeper::closeRequested, Rotator::instance(), &Rotator::close);
+    connect(Rotator::instance(), &Rotator::rotConnected, &rotKeeper, &ConnectionKeeper::deviceConnected);
+    connect(Rotator::instance(), &Rotator::rotDisconnected, &rotKeeper, &ConnectionKeeper::deviceDisconnected);
+    connect(&rotKeeper, &ConnectionKeeper::stateChanged, ui->rotatorWidget, &RotatorWidget::connectionStateChanged);
+    connect(&rotKeeper, &ConnectionKeeper::message, this, &MainWindow::showEquipmentMessage);
     connect(Rotator::instance(), &Rotator::positionChanged, ui->onlineMapWidget, &OnlineMapWidget::antPositionChanged);
     connect(Rotator::instance(), &Rotator::rotConnected, ui->onlineMapWidget, &OnlineMapWidget::rotConnected);
     connect(Rotator::instance(), &Rotator::rotDisconnected, ui->onlineMapWidget, &OnlineMapWidget::rotDisconnected);
@@ -311,6 +335,12 @@ MainWindow::MainWindow(QWidget* parent) :
     connect(ui->rotatorWidget, &RotatorWidget::bearingRequested, ui->onlineMapWidget, &OnlineMapWidget::setAntennaTarget);
 
     connect(CWKeyer::instance(), &CWKeyer::cwKeyerError, this, &MainWindow::cwKeyerErrorHandler);
+    connect(&cwKeyerKeeper, &ConnectionKeeper::openRequested, CWKeyer::instance(), &CWKeyer::open);
+    connect(&cwKeyerKeeper, &ConnectionKeeper::closeRequested, CWKeyer::instance(), &CWKeyer::close);
+    connect(CWKeyer::instance(), &CWKeyer::cwKeyConnected, &cwKeyerKeeper, &ConnectionKeeper::deviceConnected);
+    connect(CWKeyer::instance(), &CWKeyer::cwKeyDisconnected, &cwKeyerKeeper, &ConnectionKeeper::deviceDisconnected);
+    connect(&cwKeyerKeeper, &ConnectionKeeper::stateChanged, ui->cwconsoleWidget, &CWConsoleWidget::connectionStateChanged);
+    connect(&cwKeyerKeeper, &ConnectionKeeper::message, this, &MainWindow::showEquipmentMessage);
     connect(CWKeyer::instance(), &CWKeyer::cwKeyWPMChanged, ui->cwconsoleWidget, &CWConsoleWidget::setWPM);
     connect(CWKeyer::instance(), &CWKeyer::cwKeyEchoText, ui->cwconsoleWidget, &CWConsoleWidget::appendCWEchoText);
     connect(CWKeyer::instance(), &CWKeyer::cwKeyConnected, ui->cwconsoleWidget, &CWConsoleWidget::cwKeyConnected);
@@ -729,12 +759,12 @@ void MainWindow::rigConnect()
     //saveEquipmentConnOptions();
 
     if ( ui->actionConnectRig->isChecked() )
-        Rig::instance()->open();
+        rigKeeper.setWanted(true);
     else
     {
         if ( rotatorConnectPending )
             ui->newContactWidget->reportTXBand();
-        Rig::instance()->close();
+        rigKeeper.setWanted(false);
     }
 }
 
@@ -742,33 +772,32 @@ void MainWindow::rigErrorHandler(const QString &error, const QString &errorDetai
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>Rig Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
-    if ( ui->actionConnectRig->isChecked() )
-        ui->actionConnectRig->setChecked(false);
-    else
-        rigConnect();
+    // no dialog: the keeper shows the reason on the connect button and keeps trying
+    qWarning() << "Rig error:" << error << errorDetail;
+    rigKeeper.deviceFailed(error, errorDetail);
 }
 
 void MainWindow::rotErrorHandler(const QString &error, const QString &errorDetail)
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>Rotator Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
-    ui->actionConnectRotator->setChecked(false);
+    qWarning() << "Rotator error:" << error << errorDetail;
+    rotKeeper.deviceFailed(error, errorDetail);
 }
 
 void MainWindow::cwKeyerErrorHandler(const QString &error, const QString &errorDetail)
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>CW Keyer Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
-    ui->actionConnectCWKeyer->setChecked(false);
+    qWarning() << "CW Keyer error:" << error << errorDetail;
+    cwKeyerKeeper.deviceFailed(error, errorDetail);
+}
+
+void MainWindow::showEquipmentMessage(const QString &text)
+{
+    FCT_IDENTIFICATION;
+
+    ui->statusBar->showMessage(text, 15000);
 }
 
 void MainWindow::stationProfileChanged()
@@ -2067,10 +2096,7 @@ void MainWindow::rotConnect()
 
     //saveEquipmentConnOptions();
 
-    if ( ui->actionConnectRotator->isChecked() )
-        Rotator::instance()->open();
-    else
-        Rotator::instance()->close();
+    rotKeeper.setWanted(ui->actionConnectRotator->isChecked());
 }
 
 void MainWindow::selectEquipmentProfilesForBand(const QString &bandName)
@@ -2194,7 +2220,7 @@ void MainWindow::applyRotatorProfile(const QString &profileName, bool connectRot
     if ( !ui->actionConnectRotator->isChecked() )
         ui->actionConnectRotator->setChecked(true);
     else if ( profileChanged || reconnectPending )
-        Rotator::instance()->open();
+        rotKeeper.setWanted(true);   // re-open with the new profile
 }
 
 void MainWindow::cwKeyerConnect()
@@ -2203,14 +2229,7 @@ void MainWindow::cwKeyerConnect()
 
     //saveEquipmentConnOptions();;
 
-    if ( ui->actionConnectCWKeyer->isChecked() )
-    {
-        CWKeyer::instance()->open();
-    }
-    else
-    {
-        CWKeyer::instance()->close();
-    }
+    cwKeyerKeeper.setWanted(ui->actionConnectCWKeyer->isChecked());
 }
 
 void MainWindow::cwKeyerConnectProfile(QString requestedProfile)

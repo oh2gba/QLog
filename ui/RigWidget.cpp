@@ -84,6 +84,29 @@ void RigWidget::setConnectAction(QAction *action)
     ui->connectButton->setDefaultAction(action);
 }
 
+void RigWidget::connectionStateChanged(ConnectionKeeper::State state, const QString &description)
+{
+    FCT_IDENTIFICATION;
+
+    // green: connected, yellow: the connection is wanted and QLog keeps trying
+    switch ( state )
+    {
+    case ConnectionKeeper::State::Connected:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
+        break;
+    case ConnectionKeeper::State::Connecting:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: gold}");
+        break;
+    default:
+        ui->connectButton->setStyleSheet(QString());
+        break;
+    }
+
+    ui->connectButton->setToolTip(description.isEmpty() && ui->connectButton->defaultAction()
+                                  ? ui->connectButton->defaultAction()->toolTip()
+                                  : description);
+}
+
 void RigWidget::updateFrequency(VFOID vfoid, double vfoFreq, double ritFreq, double xitFreq)
 {
     FCT_IDENTIFICATION;
@@ -344,7 +367,6 @@ void RigWidget::rigConnected()
 {
     FCT_IDENTIFICATION;
 
-    ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
     rigOnline = true;
     ui->bandComboBox->blockSignals(true);
     ui->modeComboBox->blockSignals(true);
@@ -366,7 +388,6 @@ void RigWidget::rigDisconnected()
     ui->modeComboBox->blockSignals(true);
 
     saveLastSeenFreq();
-    ui->connectButton->setStyleSheet(QString());
     rigOnline = false;
     resetRigInfo();
 

@@ -738,9 +738,19 @@ void HamlibRigDrv::checkRigStateChange()
 
     qCDebug(runtime) << "Getting Rig state";
 
+    powerOffSeenInCycle = false;
     checkChanges();
 
     forceSendState = false;
+
+    // "Rig is not powered on" is a state, not a broken connection: report it
+    // once per change so that the connect button can show it
+    if ( powerOffSeenInCycle != reportedPoweredOff )
+    {
+        reportedPoweredOff = powerOffSeenInCycle;
+        qCDebug(runtime) << "Rig powered" << (reportedPoweredOff ? "off" : "on");
+        emit poweredOnChanged(!reportedPoweredOff);
+    }
 
     // restart timer
     timer.start(rigProfile.pollInterval);
@@ -1260,6 +1270,14 @@ bool HamlibRigDrv::isRigRespOK(int errorStatus,
     }
 
     lastErrorText = hamlibErrorString(errorStatus);
+
+    // the rig is switched off but still answers (typically behind rigctld);
+    // the poll cycle reports it via poweredOnChanged(), no error is raised
+    if ( errorStatus == -RIG_EPOWER || errorStatus == RIG_EPOWER )
+    {
+        powerOffSeenInCycle = true;
+        return false;
+    }
 
     if ( emitError )
     {

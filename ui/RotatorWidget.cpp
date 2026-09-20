@@ -691,7 +691,6 @@ void RotatorWidget::rotConnected()
 {
     FCT_IDENTIFICATION;
 
-    ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
     ui->gotoDoubleSpinBox->setEnabled(true);
     ui->gotoButton->setEnabled(true);
     ui->qsoBearingButton->setEnabled(true);
@@ -706,7 +705,6 @@ void RotatorWidget::rotDisconnected()
 {
     FCT_IDENTIFICATION;
 
-    ui->connectButton->setStyleSheet(QString());
     ui->gotoDoubleSpinBox->setEnabled(false);
     ui->gotoButton->setEnabled(false);
     ui->qsoBearingButton->setEnabled(false);
@@ -730,6 +728,29 @@ RotatorWidget::~RotatorWidget()
 void RotatorWidget::setConnectAction(QAction *action)
 {
     ui->connectButton->setDefaultAction(action);
+}
+
+void RotatorWidget::connectionStateChanged(ConnectionKeeper::State state, const QString &description)
+{
+    FCT_IDENTIFICATION;
+
+    // green: connected, yellow: the connection is wanted and QLog keeps trying
+    switch ( state )
+    {
+    case ConnectionKeeper::State::Connected:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
+        break;
+    case ConnectionKeeper::State::Connecting:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: gold}");
+        break;
+    default:
+        ui->connectButton->setStyleSheet(QString());
+        break;
+    }
+
+    ui->connectButton->setToolTip(description.isEmpty() && ui->connectButton->defaultAction()
+                                  ? ui->connectButton->defaultAction()->toolTip()
+                                  : description);
 }
 
 void RotatorWidget::registerContactWidget(const NewContactWidget *contactWidget)

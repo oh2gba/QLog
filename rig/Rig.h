@@ -121,6 +121,7 @@ signals:
     void rigCWKeyCloseRequest(QString);
     void rigDisconnected();
     void rigConnected();
+    void rigPoweredOnChanged(bool);
     void rigErrorPresent(QString, QString);
     void rigStatusChanged(Rig::Status);
     void rigStatusHeartBeat(Rig::Status);

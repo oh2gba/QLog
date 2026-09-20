@@ -56,6 +56,9 @@ signals:
     void xitChanged(double);
     void keySpeedChanged(unsigned int);
 
+    // the rig answers, but reports that it is switched off (e.g. behind rigctld)
+    void poweredOnChanged(bool);
+
     // Error Signal
     void errorOccurred(QString, QString);
 

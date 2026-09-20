@@ -358,6 +358,11 @@ void Rig::__openRig()
         emitRigStatusChanged();
     });
 
+    connect( rigDriver, &GenericRigDrv::poweredOnChanged, this, [this](bool poweredOn)
+    {
+        emit rigPoweredOnChanged(poweredOn);
+    });
+
     connect( rigDriver, &GenericRigDrv::errorOccurred, this, [this](const QString &a,
                                                                 const QString &b)
     {

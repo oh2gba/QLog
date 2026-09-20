@@ -1,6 +1,7 @@
 #ifndef QLOG_UI_ROTATORWIDGET_H
 #define QLOG_UI_ROTATORWIDGET_H
 
+#include "core/ConnectionKeeper.h"
 #include <QWidget>
 #include <QGraphicsPixmapItem>
 #include <QPushButton>
@@ -23,6 +24,7 @@ public:
     ~RotatorWidget();
     void registerContactWidget(const NewContactWidget*);
     void setConnectAction(QAction *action);
+    void connectionStateChanged(ConnectionKeeper::State state, const QString &description);
 
 signals:
     void rotProfileChanged();

@@ -111,6 +111,8 @@ private:
     double currTxFreq;
     QMutex drvLock;
     QHash<QString, QString>postponedErrors;
+    bool powerOffSeenInCycle = false;
+    bool reportedPoweredOff = false;
     QStringList modeList;
 };
 

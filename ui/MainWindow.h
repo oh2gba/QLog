@@ -8,6 +8,7 @@
 #include "ui/StatisticsWidget.h"
 #include "core/NetworkNotification.h"
 #include "core/AlertEvaluator.h"
+#include "core/ConnectionKeeper.h"
 #include "core/PropConditions.h"
 #include "service/clublog/ClubLog.h"
 
@@ -46,6 +47,7 @@ public slots:
     void rigErrorHandler(const QString &error, const QString &errorDetail);
     void rotErrorHandler(const QString &error, const QString &errorDetail);
     void cwKeyerErrorHandler(const QString &error, const QString &errorDetail);
+    void showEquipmentMessage(const QString &text);
     void stationProfileChanged();
     void setLayoutGeometry();
     void setSimplyLayoutGeometry();
@@ -120,6 +122,9 @@ private:
     StatisticsWidget* stats;
     NetworkNotification networknotification;
     AlertEvaluator alertEvaluator;
+    ConnectionKeeper rigKeeper;
+    ConnectionKeeper rotKeeper;
+    ConnectionKeeper cwKeyerKeeper;
     PropConditions *conditions;
     bool isFusionStyle;
     ClubLogUploader* clublogRT;

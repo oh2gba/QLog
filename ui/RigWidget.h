@@ -1,6 +1,7 @@
 #ifndef QLOG_UI_RIGWIDGET_H
 #define QLOG_UI_RIGWIDGET_H
 
+#include "core/ConnectionKeeper.h"
 #include <QWidget>
 #include "rig/Rig.h"
 #include "service/hrdlog/HRDLog.h"
@@ -21,6 +22,7 @@ public:
     explicit RigWidget(QWidget *parent = nullptr);
     ~RigWidget();
     void setConnectAction(QAction *action);
+    void connectionStateChanged(ConnectionKeeper::State state, const QString &description);
 
 signals:
     void rigProfileChanged();

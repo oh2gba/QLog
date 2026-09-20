@@ -72,6 +72,29 @@ void CWConsoleWidget::setConnectAction(QAction *action)
     ui->connectButton->setDefaultAction(action);
 }
 
+void CWConsoleWidget::connectionStateChanged(ConnectionKeeper::State state, const QString &description)
+{
+    FCT_IDENTIFICATION;
+
+    // green: connected, yellow: the connection is wanted and QLog keeps trying
+    switch ( state )
+    {
+    case ConnectionKeeper::State::Connected:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
+        break;
+    case ConnectionKeeper::State::Connecting:
+        ui->connectButton->setStyleSheet("QToolButton {background-color: gold}");
+        break;
+    default:
+        ui->connectButton->setStyleSheet(QString());
+        break;
+    }
+
+    ui->connectButton->setToolTip(description.isEmpty() && ui->connectButton->defaultAction()
+                                  ? ui->connectButton->defaultAction()->toolTip()
+                                  : description);
+}
+
 void CWConsoleWidget::registerContactWidget(const NewContactWidget * contactWidget)
 {
     FCT_IDENTIFICATION;
@@ -311,7 +334,6 @@ void CWConsoleWidget::cwKeyConnected(QString profile)
 {
     FCT_IDENTIFICATION;
 
-    ui->connectButton->setStyleSheet("QToolButton {background-color: green}");
 
     if ( profile != ui->cwKeyProfileCombo->currentText() )
     {
@@ -330,7 +352,6 @@ void CWConsoleWidget::cwKeyDisconnected()
 {
     FCT_IDENTIFICATION;
 
-    ui->connectButton->setStyleSheet(QString());
 
     allowMorseSending(false);
 

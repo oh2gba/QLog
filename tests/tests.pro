@@ -6,6 +6,7 @@ SUBDIRS += CallsignTest \
            AdxFormatTest \
            AdifRecoveryTest \
            CredentialStoreTest \
+           ConnectionKeeperTest \
            DataTest \
            FileCompressorTest \
            CabrilloFormatTest \

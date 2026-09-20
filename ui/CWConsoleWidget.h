@@ -1,6 +1,7 @@
 #ifndef QLOG_UI_CWCONSOLEWIDGET_H
 #define QLOG_UI_CWCONSOLEWIDGET_H
 
+#include "core/ConnectionKeeper.h"
 #include <QWidget>
 #include "ui/NewContactWidget.h"
 
@@ -19,6 +20,7 @@ public:
     ~CWConsoleWidget();
     void registerContactWidget(const NewContactWidget*);
     void setConnectAction(QAction *action);
+    void connectionStateChanged(ConnectionKeeper::State state, const QString &description);
 
 signals:
     void cwKeyProfileChanged();
