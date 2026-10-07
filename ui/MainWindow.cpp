@@ -758,9 +758,8 @@ void MainWindow::rigErrorHandler(const QString &error, const QString &errorDetai
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>Rig Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
+    showEquipmentError(tr("Rig"), error, errorDetail);
+
     if ( ui->actionConnectRig->isChecked() )
         ui->actionConnectRig->setChecked(false);
     else
@@ -771,9 +770,7 @@ void MainWindow::rotErrorHandler(const QString &error, const QString &errorDetai
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>Rotator Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
+    showEquipmentError(tr("Rotator"), error, errorDetail);
     ui->actionConnectRotator->setChecked(false);
 }
 
@@ -781,10 +778,20 @@ void MainWindow::cwKeyerErrorHandler(const QString &error, const QString &errorD
 {
     FCT_IDENTIFICATION;
 
-    QMessageBox::warning(nullptr, QMessageBox::tr("QLog Warning"),
-                         QMessageBox::tr("<b>CW Keyer Error:</b> ") + error
-                                         + "<p>" + tr("<b>Error Detail:</b> ") + errorDetail + "</p>");
+    showEquipmentError(tr("CW Keyer"), error, errorDetail);
     ui->actionConnectCWKeyer->setChecked(false);
+}
+
+void MainWindow::showEquipmentError(const QString &device, const QString &error, const QString &errorDetail)
+{
+    FCT_IDENTIFICATION;
+
+    // A radio switched off or a cable pulled is an everyday event: tell the
+    // operator in the status bar instead of a modal box that steals the focus.
+    const QString text = tr("%1: %2 (%3)").arg(device, error, errorDetail);
+
+    qCWarning(runtime) << text;
+    ui->statusBar->showMessage(text, 15000);
 }
 
 void MainWindow::stationProfileChanged()
