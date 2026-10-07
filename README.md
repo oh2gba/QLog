@@ -1,9 +1,9 @@
 # QLog, the OH2GBA build
 
 This is my daily [QLog](https://github.com/foldynl/QLog), with a handful of changes
-that I wanted as a DXer and could not wait for. It is not an official QLog release and
-the QLog maintainer does not support it. Everything here is also offered upstream as a
-pull request, so with a bit of luck this page gets shorter over time.
+that I wanted as a DXer and could not wait for. It is not an official QLog release; if
+something here misbehaves, ask me, not the QLog maintainer. Most of the changes are also
+offered upstream as pull requests, so with a bit of luck this page gets shorter over time.
 
 The branch `master` of this fork is an untouched mirror of upstream. The branch you are
 looking at, `oh2gba`, is upstream plus the changes below.
