@@ -1,314 +1,80 @@
-# QLog
+# QLog, the OH2GBA build
 
-QLog is an Amateur Radio logging application for Linux, Windows. It
-is based on the Qt framework and uses SQLite as database backend.
+This is my daily [QLog](https://github.com/foldynl/QLog), with a handful of changes
+that I wanted as a DXer and could not wait for. It is not an official QLog release and
+the QLog maintainer does not support it. Everything here is also offered upstream as a
+pull request, so with a bit of luck this page gets shorter over time.
 
-QLogs aims to be as simple as possible, but to provide everything the operator expects from the log to be. This log is not currently focused on contests.
+The branch `master` of this fork is an untouched mirror of upstream. The branch you are
+looking at, `oh2gba`, is upstream plus the changes below.
 
-![Screenshot](https://foldynl.github.io/QLog/screens/qlog_main.png)
+## Before you try it, read this
 
-## Features
+**This build changes the database.** It adds its own migrations (042 to 044) that the
+official QLog does not have. A log opened with this build can no longer be opened by an
+official release, and a future official release will not know how to migrate it.
 
-- Customizable GUI
-- Rig control via Hamlib, Omnirig v1 (Windows only), Omnirig v2 (Windows only), TCI, FLRig
-- Rotator control via Hamlib, PSTRotator
-- HamQTH and QRZ.com callbook integration
-- DX cluster integration
-- **LoTW**, **eQSL**, **QRZ.com**, **Clublog**, **HRDLog.net**, **ON4KST Chat**, **Cloudlog/Wavelog** integration (**eQSL includes QSL pictures download**)
-- **Secure Password Storage** for all services with password or security token
-- **Online** and **Offline** map
-- Club Member lookup
-- CW Keyer Support - CWDaemon, FLDigi (all supported modes), Morse Over CAT, WinKey v1 or v2
-- Bandmap
-- CW Console
-- WSJT-X integration
-- Station Location Profile support
-- Various station statistics
-- Basic Awards support
-- Basic Contest support
-- Custom QSO Filters
-- **NO** ads, **NO** user tracking, **NO** hidden telemetry - simply free and open-source
-- SQLite backend.
+So: **work on a copy of your log**, or keep a fresh ADIF export of it. If you later go back
+to the official QLog, import that export into a new log. Do not point this build at the
+only copy of your logbook.
 
-### Supported OS
-* Linux
-* Windows 10/11 (64bit)
-* MacOS (experimental - only for developers)
+## What is different
 
-### Supported Rigs
-* all supported by [Hamlib](https://hamlib.github.io/)
-* all supported by [Omnirig v1](https://www.dxatlas.com/omnirig/) (Windows only)
-* all supported by [Omnirig v2](https://www.hb9ryz.ch/omnirig/) (Windows only)
-* all supported by [TCI](https://eesdr.com/en/software-en/software-en)
-* all supported by [FLRig](http://www.w1hkj.com/flrig-help/supported_transceivers.html)
+| Change | Why | Upstream |
+|---|---|---|
+| **Alert rule "Log Status"** reads as a sentence: *I need this [New Entity, New Band, New Mode, New Band & Mode] until it is [Worked, Confirmed]* | An alert for a country I worked but never got confirmed. I asked for it in words since 2024, this is the version that explains itself | [PR 1174](https://github.com/foldynl/QLog/pull/1174) |
+| **Alert rule "Alarm"**: no alarm, the system bell, or a command of your own, per rule, with a repeat limit. *Mute Alarms* in the bell menu silences all of them | My alert sends "DX" in Morse through the shack speaker. Any sound tool or script works, QLog just starts it | [PR 1175](https://github.com/foldynl/QLog/pull/1175) |
+| **Spot click lands on the spot** also on rigs that move the dial with the mode | The Yaesu FTDX series shifts the dial by the CW pitch between SSB and CW. QLog now sends the frequency once more after the mode | [PR 1191](https://github.com/foldynl/QLog/pull/1191) |
+| **CAT command after a spot click**, a text field in the rig profile | `SY2;` makes the FTDX101 sub receiver follow the DX, on its own antenna. Two antennas, two receivers, one DX | [PR 1192](https://github.com/foldynl/QLog/pull/1192) |
+| **No popup when the radio goes away** | Switching the rig off, pulling a cable or stopping rigctld showed a modal box that stole the focus. Now it is one line in the status bar. Same for rotator and CW keyer | local only |
 
-### Supported Rotators
-* all supported by [Hamlib](https://hamlib.github.io/)
+### The alert rule, Log Status
 
-### Supported Keyers
-* [CWDaemon](https://cwdaemon.sourceforge.net/)
-* [FLDigi](http://www.w1hkj.com/)
-* Morse Over CAT
-* WinKey v1 or v2 compatible hardware
+![Alert rule, Log Status](doc/images/alert-rule-log-status.png)
 
-### Supported Secure Password Storage
-* Linux: LibSecretKeyring, GnomeKeyring, Kwallet4, Kwallet5
-* Windows: Windows Credential Store
-* MacOS: macOS Keychain
+The rule alerts as long as the sentence is true. Which QSLs count as a confirmation
+(LoTW, eQSL, paper) is the same setting that colours the DX cluster window, so alerts
+and colours always agree. Details in [doc/alert-log-status.md](doc/alert-log-status.md).
 
-### Third-party software
-* [TQSL](http://www.arrl.org/tqsl-download) – optional, needed for LoTW support
+### The alert rule, Alarm
 
-For more details, screenshots etc, please, see [QLog Wiki](https://github.com/foldynl/QLog/wiki)
+![Alert rule, Alarm tab](doc/images/alert-rule-alarm.png)
 
-Please, used [QLog Issues](https://github.com/foldynl/QLog/issues) for reporting any issue or open a [discussion](https://github.com/foldynl/QLog/discussions).
-You can also use [QLog mailing list](https://groups.io/g/qlog)
+Placeholders `{callsign}`, `{band}`, `{mode}`, `{freq}`, `{country}` and `{rule}` are
+filled in before the command starts. Examples for Linux, Windows and macOS are in
+[doc/alert-alarm.md](doc/alert-alarm.md).
 
+### The rig profile, CAT after spot tuning
 
-## Installation
+![Rig profile, CAT after spot tuning](doc/images/rig-profile-spot-command.png)
 
-### Minimum Hardware Requirements
-- The recommended graphical resolution: 1920x1080
-- CPU and memory: minimum requirements the same as for your OS
-- Graphic Card with OpenGL support
-- Serial connection if radio control is used
+Leave it empty and nothing happens. On a Yaesu FTDX101 put `SY2;` there.
 
-### Linux
+## Building it
 
-Prerequisites:
-
-- Installed Trusted QSL (Optional) - `sudo apt install trustedqsl` or from [ARRL](http://www.arrl.org/tqsl-download)
-
-**DEB packages** for currently supported Ubuntu versions are available for amd64, arm64 platforms via [Ubuntu PPA](https://launchpad.net/~foldyna/+archive/ubuntu/qlog). Ubuntu users can use following commands:
+I build in a Docker container so that nothing has to be installed on the machine
+(Debian 13, Qt 6.8, Hamlib 4.6.2):
 
 ```bash
-sudo add-apt-repository ppa:foldyna/qlog
-sudo apt -U install qlog
+git clone -b oh2gba https://github.com/oh2gba/QLog.git
+cd QLog
+mkdir build
+docker build -f packaging/docker/Dockerfile -t qlog-build:trixie packaging
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $PWD:/src -w /src/build \
+    qlog-build:trixie bash -c 'qmake6 ../QLog.pro CONFIG+=release && make -j$(nproc)'
 ```
 
-**Fedora** packages are available in the official repo, so it is enough to do a `dnf install qlog trustedqsl`.
+The binary ends up in `build/qlog`. I run it with its own data directory, so it never
+touches the official installation:
 
-**RPM packages** are available via GitHub [Releases](https://github.com/foldynl/QLog/releases/latest)
-
-<a href='https://flathub.org/apps/io.github.foldynl.QLog'>   <img width='120' alt='Download on Flathub' src='https://dl.flathub.org/assets/badges/flathub-badge-en.png'/></a>
-
-**Flatpak** package is available via [Flathub](https://flathub.org/apps/io.github.foldynl.QLog). The package contains built-in TrustedQSL.
-
-The above packages are maintained by the application maintainer. If your distribution is neither Ubuntu or Fedora, Flatpak is the recommended way of getting QLog.
-
-However, there are many other unofficial packages available for other distributions — see the Unofficial Repositories on [QLog Wiki](https://github.com/foldynl/QLog/wiki) or [Repology](https://repology.org/project/qlog/versions).
-
-> [!CAUTION]
-> Beware that these are unofficial packages!
-
-On **Debian** forky or newer:
 ```bash
-sudo apt -U install qlog
+build/qlog --namespace dev
 ```
 
-On **openSUSE** Tumbleweed:
-```bash
-sudo zypper install QLog
-```
+## Credits
 
-### Windows
+QLog is written by Ladislav Foldyna, OK1MLG, and friends. All of this sits on top of his work
+and keeps the GPL licence that comes with it. The ideas are mine and everything
+is tested on the air on a Yaesu FTDX-101D.
 
-Prerequisites:
-
-- Installed [Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version)
-- Installed [Trusted QSL](http://www.arrl.org/tqsl-download) (Optional)
-- Installed [Omnirig v1](https://www.dxatlas.com/omnirig/) (Optional)
-- Installed [Omnirig v2](https://www.hb9ryz.ch/omnirig/) (Optional)
-
-Installation package is available via GitHub [Releases](https://github.com/foldynl/QLog/releases) .
-
-### MacOS
-
-MacOS DMG: https://github.com/aa5sh/QLog/releases
-
-## Disclaimer Regarding Forks and Clones
-
-This project is released as open source and may be forked or modified in accordance with its license.
-
-If you are using a fork, clone, or any modified version of this project that is not maintained in this official repository, please note:
-
-- We do **not** provide support for any forks, clones, or modified versions of this project.
-- This includes support requests related to "core features" as changes introduced in forks may directly or indirectly affect their behavior.
-- Any issues, bug reports, or feature requests concerning a forked or modified version must be directed to the maintainer of that specific repository.
-
-Support is provided exclusively for the original, unmodified version of the project distributed from this official source.
-
-By using a fork or modified version, you acknowledge that compatibility, stability, and functionality may differ from the original project, and responsibility
-for such differences lies solely with the maintainer of that fork.
-
-## Compilation
-
-### General
-
-Prerequisites
-
-- Installed Qt
-- Installed [qtkeychain-devel](https://github.com/frankosterfeld/qtkeychain) library and headers
-- Installed [OpenSSL-devel](https://wiki.openssl.org/index.php/Binaries) libraries and headers
-- Installed [HamLib-devel](https://github.com/Hamlib/Hamlib/releases/latest) libraries and headers
-
-`qmake` supports listed input parameters that affect the compilation process.
-
-- `HAMLIBINCLUDEPATH` - the path to Hamlib Includes 
-- `HAMLIBLIBPATH` - the path to Hamlib Library 
-- `HAMLIBVERSION_MAJOR` - Hamlib version - major number (must be present if `pkg-config` cannot determine Hamlib version)
-- `HAMLIBVERSION_MINOR` - Hamlib version - minor number (must be present if `pkg-config` cannot determine Hamlib version)
-- `HAMLIBVERSION_PATCH` - Hamlib version - patch number (must be present if `pkg-config` cannot determine Hamlib version)
-- `PTHREADINCLUDEPATH`  - the path to pthread Includes - needed for Windows Hamlib 4.5 and later. Leave empty if system libraries should be used.
-- `PTHREADLIBPATH` - the path to pthread Library - needed for Windows Hamlib 4.5 and later. Leave empty if system libraries should be used.
-- `QTKEYCHAININCLUDEPATH` - the path to QtKeyChain Includes 
-- `QTKEYCHAINLIBPATH`- the path to QtKeyChain Library
-- `ZLIBINCLUDEPATH` - the path to ZLIB Includes
-- `ZLIBLIBPATH` - the path to ZLIB Library
-
-Leave variables empty if system libraries and Hamlib version autodetect (calling `pkg-config`) should be used during compilation (for Windows, the parameter must be present)
-
-An example of use:
-
-`
-C:/Qt/6.4.1/msvc2019_64/bin/qmake.exe C:\Users\devel\development\QLog\QLog.pro -spec win32-msvc "CONFIG+=qtquickcompiler" "HAMLIBINCLUDEPATH = C:\Users\devel\development\hamlib\include" "HAMLIBLIBPATH =  C:\Users\devel\development\hamlib\lib\gcc" "HAMLIBVERSION_MAJOR = 4" "HAMLIBVERSION_MINOR = 5" "HAMLIBVERSION_PATCH = 0" "QTKEYCHAININCLUDEPATH = C:\Users\devel\development\qtkeychain_build\include" "QTKEYCHAINLIBPATH = C:\Users\devel\development\qtkeychain_build\lib" && C:/Qt/Tools/QtCreator/bin/jom/jom.exe qmake_all
-`
-
-### Windows
-
-Prerequisites
-
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/)
-- QT with source codes (6.x, Qt Webengine, OpenSSL Toolkit)
-- [Omnirig v1](https://www.dxatlas.com/omnirig/)
-- [Omnirig v2](https://www.hb9ryz.ch/omnirig/)
-- [Hamlib](https://github.com/Hamlib/Hamlib/releases)
-  - hamlib-w64-4.5.5.exe is the latest
-    - Need to run the following commands to "fix" the library *** Fix Paths if necessary ***
-      CD "C:\Program Files\hamlib-w64-4.5.5\lib\msvc"
-      "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\bin\Hostx64\x64\link.exe" /lib /machine:X64 /def:libhamlib-4.def
-      copy libhamlib-4.lib hamlib.lib
-- Install C++ Module - https://learn.microsoft.com/en-us/vcpkg/get_started/get-started-vscode?pivots=shell-powershell
-
-	cd C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg
-	vcpkg install pthreads
-	vcpkg install qtkeychain-qt6
-
-System Environmental Path Settings
-	C:\Program Files\hamlib-w64-4.5.5\bin
-	C:\QTTools\vcpkg\packages\qtkeychain-qt6_x64-windows\bin
-
-Clone QLog Master Branch
-In QT Creator Projects->Desktop Qt 6.8.0 MSVC2022 64Bit->Build Steps->Additional Arguments
-	**** You need to update the paths accordingly ****
-	**** Need to be on same line seperated by spaces ****
-	"HAMLIBINCLUDEPATH='C:\Program Files\hamlib-w64-4.5.5\include'"
-	"HAMLIBLIBPATH='C:\Program Files\hamlib-w64-4.5.5\lib\msvc'"
-	"HAMLIBVERSION_MAJOR=4"
-	"HAMLIBVERSION_MINOR=5"
-	"HAMLIBVERSION_PATCH=5"
-	"QTKEYCHAININCLUDEPATH=C:\QTTools\vcpkg\packages\qtkeychain-qt6_x64-windows\include"
-	"QTKEYCHAINLIBPATH=C:\QTTools\vcpkg\packages\qtkeychain-qt6_x64-windows\lib"
-	"PTHREADLIBPATH=C:\QTTools\vcpkg\packages\pthreads_x64-windows\lib"
-	"PTHREADINCLUDEPATH=C:\QTTools\vcpkg\packages\pthreads_x64-windows\include"
-
-
-### Linux
-
-for Debian:
-
-`sudo apt-get -y install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools libsqlite3-dev libhamlib++-dev libqt5charts5-dev qttools5-dev-tools libqt5keychain1 qt5keychain-dev qtwebengine5-dev build-essential libqt5serialport5-dev pkg-config libqt5websockets5-dev libssl-dev`
-
-for Debian (QT6):
-
-`sudo apt-get -y install libhamlib-dev build-essential pkg-config qt6-base-dev qtkeychain-qt6-dev qt6-webengine-dev libqt6charts6-dev libqt6serialport6 libqt6webenginecore6-bin libqt6svg6-dev libgl-dev libqt6websockets6-dev qt6-serialport-dev libsqlite3-dev libssl-dev`
-
-for Fedora:
-
-`dnf install qt5-qtbase-devel qt5-qtwebengine-devel qt5-qtcharts-devel hamlib-devel qtkeychain-qt5-devel qt5-qtserialport-devel pkg-config qt5-qtwebsockets-devel libsqlite3x-devel openssl-devel`
-
-for both:
-
-`git clone https://github.com/foldynl/QLog.git`
-
-`cd  QLog`
-
-for Debian:
-
-`qmake QLog.pro`
-
-for Debian (QT6):
-
-`qmake6 QLog.pro`
-
-for Fedora:
-
-`/usr/bin/qmake-qt5`
-
-NOTE: if it is necessary then use `qmake` input parameters described above to affect compilation. The input parameter must be use in case when Hamlib or qtkeychain are compiled from their source code repos.
-
-for all:
-
-`make`
-
-### MacOS
-
-In order to build QLog on MacOS, following prerequisites must be satisfied.
-
-1. [Xcode](#xcode) command line tools
-2. [Homebrew](https://brew.sh)
-3. [Qt](https://www.qt.io) with QtCreator
-
-##### Xcode
-
-Xcode command line tools can be installed by issuing a command in command terminal:
-
-```
-xcode-select --install
-```
-
-**N.B.:** This command doesn't install Xcode itself, however It will take some time to download and
-install the tools anyway.
-
-##### MacOS build
-
-Last dependencies before building QLog are:
-
-```
- brew install qt6
- brew link qt6 --force
- brew install hamlib
- brew link hamlib --force
- brew install qtkeychain
- brew install dbus-glib
- brew install brotli
- brew install icu4c
- brew install pkg-config
-```
-
-As soon as the steps above are finished, QLog source can be opened in QtCreator, configured, built and run.
-QLog app (qlog.app) from the build artifacts folder can be later copied (`installed`) to `~/Applications` and
-accessed via Spotlight search bar.
-
-NOTE: if it is necessary then use `qmake` input parameters described above to affect compilation. The input parameter must be use in case when hamlib or qtkeychain is compiled from their source code repos.
-
-
-
-## License
-
-Copyright (C) 2020  Thomas Gatzweiler
-
-Copyright (C) 2021-2026  Ladislav Foldyna
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+73, John OH2GBA
